@@ -1,0 +1,57 @@
+Fs=10000;
+A=0.8;
+Ts=1/Fs;
+dur=1.5;
+t=0:Ts:dur;
+Theta=2*pi*(100+200*t+500*t.*t);
+chirpsig=A*sin(Theta);
+audiowrite('mychirp1.wav',chirpsig,Fs);
+
+function signal = mychirp(f1, f2, dur, fs)
+    % MYCHIRP Generate a linear-FM chirp signal
+    %
+    % Usage: xx = mychirp(f1, f2, dur, fs)
+    %
+    % f1 = starting frequency (Hz)
+    % f2 = ending frequency (Hz)
+    % dur = total duration of the chirp signal (seconds)
+    % fs = sampling frequency (Hz)
+
+    % Check if fs is provided; if not, set default fs = 8000
+    if nargin < 4
+        fs = 8000; % default sampling frequency
+    end
+    
+    % Time vector
+    ts = 1 / fs; % Sampling period
+    t = 0:ts:dur-ts; % Time vector
+    
+    % Calculate the frequency slope
+    a = (f2 - f1) / (2 * dur); % Slope of the chirp
+    
+    % Generate the instantaneous phase (theta)
+    theta = 2 * pi * (f1 * t + a * t.^2);
+    
+    % Generate the chirp signal by taking the real part of the complex exponential
+    signal = real(exp(1i * theta));
+end
+
+% Test the mychirp function
+f1 = 200; % Starting frequency in Hz
+f2 = 5000; % Ending frequency in Hz
+dur = 3; % Duration of the chirp in seconds
+fs = 44100; % Sampling frequency in Hz
+
+% Generate the chirp signal
+chirpsig = mychirp(f1, f2, dur, fs);
+
+% Plot the waveform of the chirp signal
+figure;
+plot((0:length(chirpsig)-1)/fs, chirpsig);
+xlabel('Time (seconds)');
+ylabel('Amplitude');
+title('Chirp Signal Waveform');
+
+% Save the chirp signal to a WAV file
+audiowrite('chirp_signal.wav', chirpsig, fs);
+disp('Chirp signal saved to chirp_signal.wav');
