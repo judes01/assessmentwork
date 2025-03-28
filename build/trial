@@ -1,0 +1,132 @@
+%% Step 1: Compare the Frequency Content of Two Audio Files
+
+% Load the two audio files 
+x1 = audioread('audio_file1.wav'); % Replace with the path to your first audio file
+x2 = audioread('audio_file2.wav'); % Replace with the path to your second audio file
+fs1 = 44100; % Assuming the sample rate is 44100 Hz for both files
+fs2 = 44100; % 
+
+
+
+% Plot Magnitude Spectrum for File 1
+figure;
+subplot(2,1,1);
+n1 = length(x1);
+f1 = (0:n1-1)*(fs1/n1);  % Frequency vector
+X1 = fft(x1);            % Fourier transform of the signal
+magnitude1 = abs(X1);
+plot(f1(1:n1/2), magnitude1(1:n1/2)); % Only positive frequencies
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+title('Magnitude Spectrum of Audio File 1');
+
+% Plot Magnitude Spectrum for File 2
+subplot(2,1,2);
+n2 = length(x2);
+f2 = (0:n2-1)*(fs2/n2);  % Frequency vector
+X2 = fft(x2);            % Fourier transform of the signal
+magnitude2 = abs(X2);
+plot(f2(1:n2/2), magnitude2(1:n2/2)); % Only positive frequencies
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+title('Magnitude Spectrum of Audio File 2');
+
+% Plot Phase Spectrum for File 1
+figure;
+subplot(2,1,1);
+phase1 = angle(X1);
+plot(f1(1:n1/2), phase1(1:n1/2));
+xlabel('Frequency (Hz)');
+ylabel('Phase (radians)');
+title('Phase Spectrum of Audio File 1');
+
+% Plot Phase Spectrum for File 2
+subplot(2,1,2);
+phase2 = angle(X2);
+plot(f2(1:n2/2), phase2(1:n2/2));
+xlabel('Frequency (Hz)');
+ylabel('Phase (radians)');
+title('Phase Spectrum of Audio File 2');
+
+%% Step 2: Apply a Low-pass Filter to an Audio File (Single Filter Type)
+
+% Load the audio file (already provided)
+x = audioread('audio_file_to_filter.wav'); % Replace with the path to your audio file
+fs = 44100; % Assuming the sample rate is 44100 Hz
+
+% Normalize the audio if necessary
+x = normalize(x);
+
+% Set filter parameters
+filter_type = 'low';   % Fixed filter type: low-pass
+fc = 1000;             % Cutoff frequency in Hz
+order = 4;             % Filter order
+
+% Design the filter using the Butterworth filter design function
+Wn = fc / (fs / 2);  % Normalize cutoff frequency
+[b, a] = butter(order, Wn, filter_type);
+
+% Apply the filter to the audio signal
+y = filter(b, a, x);
+
+% Save the filtered audio to a new file
+audiowrite('filtered_audio.wav', y, fs);
+
+% Plot the magnitude and phase response of the filter
+[H, f] = freqz(b, a, 2048, fs);  % Frequency response of the filter
+figure;
+subplot(2,1,1);
+plot(f, abs(H));
+title('Magnitude Response of the Filter');
+xlabel('Frequency (Hz)');
+ylabel('Magnitude');
+
+subplot(2,1,2);
+plot(f, angle(H));
+title('Phase Response of the Filter');
+xlabel('Frequency (Hz)');
+ylabel('Phase (radians)');
+
+%H: This is the frequency response of the filter. It is a complex vector that represents how the filter affects each frequency component of a signal. The magnitude of H tells you how much gain or attenuation the filter applies to each frequency, and the phase of H tells you how the filter shifts the phase of each frequency.
+%|H| (magnitude) represents the gain at each frequency.
+%angle(H) (phase) represents the phase shift at each frequency.
+%f: This is the frequency vector in Hz. It represents the frequencies corresponding to the points in the frequency response H. The length of f is the same as the length of H, and each element of f represents the frequency corresponding to that value in H.
+
+%% Step 3: Apply Convolution Reverb to an Audio File
+
+% Load the audio file (already provided)
+x = audioread('audio_file_to_apply_reverb.wav'); % Replace with the path to your audio file
+
+% Normalize the audio if necessary
+x = normalize(x);
+
+% Load the impulse response (IR) (already provided)
+ir = audioread('impulse_response.wav'); % Replace with the path to your IR file
+
+
+% Convolve the audio signal with the impulse response (apply reverb)
+y_reverb = conv(x, ir, 'same');  % 'same' ensures output size matches input size
+
+% Normalize the output to prevent clipping
+y_reverb = normalize(y_reverb);
+
+% Save the output with reverb applied
+audiowrite('audio_with_reverb.wav', y_reverb, fs);
+
+% Plot the original and reverb-processed signals for comparison
+figure;
+subplot(2,1,1);
+plot(x);
+title('Original Audio Signal');
+xlabel('Sample');
+ylabel('Amplitude');
+
+subplot(2,1,2);
+plot(y_reverb);
+title('Audio Signal with Convolution Reverb');
+xlabel('Sample');
+ylabel('Amplitude');
+
+% Listen to the processed audio (optional)
+% sound(y_reverb, fs);
+
