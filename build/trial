@@ -1,132 +1,139 @@
 %% Step 1: Compare the Frequency Content of Two Audio Files
 
-% Load the two audio files 
-x1 = audioread('audio_file1.wav'); % Replace with the path to your first audio file
-x2 = audioread('audio_file2.wav'); % Replace with the path to your second audio file
-fs1 = 44100; % Assuming the sample rate is 44100 Hz for both files
-fs2 = 44100; % 
+% Load the two audio files
+x1 = audioread('audiosamples/task1sig.wav'); % Read first audio file
+x2 = audioread('audiosamples/task2sig.wav'); % Read second audio file
 
+fs1 = 44100; % Sample rate for first file (assumed 44.1 kHz)
+fs2 = 44100; % Sample rate for second file (assumed same)
 
-
-% Plot Magnitude Spectrum for File 1
+% Compute FFT and plot Magnitude Spectrum for File 1
 figure;
-subplot(2,1,1);
-n1 = length(x1);
-f1 = (0:n1-1)*(fs1/n1);  % Frequency vector
-X1 = fft(x1);            % Fourier transform of the signal
-magnitude1 = abs(X1);
-plot(f1(1:n1/2), magnitude1(1:n1/2)); % Only positive frequencies
+subplot(2,1,1); % Create subplot for first audio file
+n1 = length(x1); % Get the number of samples in first file
+f1 = (0:n1-1)*(fs1/n1);  % Compute frequency vector for FFT
+X1 = fft(x1);  % Compute the Fast Fourier Transform (FFT)
+magnitude1 = abs(X1); % Get magnitude spectrum
+plot(f1(1:floor(n1/2)), magnitude1(1:floor(n1/2))); % Plot only positive frequencies
 xlabel('Frequency (Hz)');
 ylabel('Magnitude');
 title('Magnitude Spectrum of Audio File 1');
 
-% Plot Magnitude Spectrum for File 2
-subplot(2,1,2);
-n2 = length(x2);
-f2 = (0:n2-1)*(fs2/n2);  % Frequency vector
-X2 = fft(x2);            % Fourier transform of the signal
-magnitude2 = abs(X2);
-plot(f2(1:n2/2), magnitude2(1:n2/2)); % Only positive frequencies
+% Compute FFT and plot Magnitude Spectrum for File 2
+subplot(2,1,2); % Create subplot for second audio file
+n2 = length(x2); % Get number of samples in second file
+f2 = (0:n2-1)*(fs2/n2);  % Compute frequency vector for second file
+X2 = fft(x2);  % Compute FFT
+magnitude2 = abs(X2); % Get magnitude spectrum
+plot(f2(1:floor(n2/2)), magnitude2(1:floor(n2/2))); % Plot only positive frequencies
 xlabel('Frequency (Hz)');
 ylabel('Magnitude');
 title('Magnitude Spectrum of Audio File 2');
 
-% Plot Phase Spectrum for File 1
+% Compute and Plot Phase Spectrum for File 1
 figure;
-subplot(2,1,1);
-phase1 = angle(X1);
-plot(f1(1:n1/2), phase1(1:n1/2));
+subplot(2,1,1); % Create subplot for first file
+phase1 = angle(X1); % Compute phase spectrum (angle of FFT)
+plot(f1(1:floor(n1/2)), phase1(1:floor(n1/2))); % Plot phase spectrum
 xlabel('Frequency (Hz)');
 ylabel('Phase (radians)');
 title('Phase Spectrum of Audio File 1');
 
-% Plot Phase Spectrum for File 2
-subplot(2,1,2);
-phase2 = angle(X2);
-plot(f2(1:n2/2), phase2(1:n2/2));
+% Compute and Plot Phase Spectrum for File 2
+subplot(2,1,2); % Create subplot for second file
+phase2 = angle(X2); % Compute phase spectrum
+plot(f2(1:floor(n2/2)), phase2(1:floor(n2/2))); % Plot phase spectrum
 xlabel('Frequency (Hz)');
 ylabel('Phase (radians)');
 title('Phase Spectrum of Audio File 2');
 
-%% Step 2: Apply a Low-pass Filter to an Audio File (Single Filter Type)
+%% Step 2: Apply a Low-pass Filter to an Audio File
 
-% Load the audio file (already provided)
-x = audioread('audio_file_to_filter.wav'); % Replace with the path to your audio file
-fs = 44100; % Assuming the sample rate is 44100 Hz
+% Check if file exists before loading to prevent errors
+filter_file = 'audiosamples/task1sig.wav'; % File path
 
-% Normalize the audio if necessary
-x = normalize(x);
+
+% Load the audio file
+x = audioread(filter_file); % Read the file
+fs = 44100; % Sample rate assumed to be 44.1 kHz
+
+% Normalize the audio signal between -1 and 1
+x = x / max(abs(x)); 
 
 % Set filter parameters
-filter_type = 'low';   % Fixed filter type: low-pass
-fc = 1000;             % Cutoff frequency in Hz
-order = 4;             % Filter order
+fc = 1000; % Cutoff frequency in Hz
+order = 4; % Filter order
 
-% Design the filter using the Butterworth filter design function
-Wn = fc / (fs / 2);  % Normalize cutoff frequency
-[b, a] = butter(order, Wn, filter_type);
+% Design the Butterworth low-pass filter
+Wn = fc / (fs / 2); % Normalize cutoff frequency
+[b, a] = butter(order, Wn, 'low'); % Create filter coefficients
 
 % Apply the filter to the audio signal
-y = filter(b, a, x);
+y = filter(b, a, x); % Apply filter using digital filter function
 
 % Save the filtered audio to a new file
-audiowrite('filtered_audio.wav', y, fs);
+audiowrite('filtered_audio.wav', y, fs); % Write output file
 
-% Plot the magnitude and phase response of the filter
-[H, f] = freqz(b, a, 2048, fs);  % Frequency response of the filter
+% Compute and Plot the filter frequency response
+[H, f] = freqz(b, a, 2048, fs); % Compute frequency response
 figure;
-subplot(2,1,1);
-plot(f, abs(H));
+subplot(2,1,1); % Create subplot for magnitude response
+plot(f, abs(H)); % Plot magnitude response
 title('Magnitude Response of the Filter');
 xlabel('Frequency (Hz)');
 ylabel('Magnitude');
 
-subplot(2,1,2);
-plot(f, angle(H));
+subplot(2,1,2); % Create subplot for phase response
+plot(f, angle(H)); % Plot phase response
 title('Phase Response of the Filter');
 xlabel('Frequency (Hz)');
 ylabel('Phase (radians)');
 
-%H: This is the frequency response of the filter. It is a complex vector that represents how the filter affects each frequency component of a signal. The magnitude of H tells you how much gain or attenuation the filter applies to each frequency, and the phase of H tells you how the filter shifts the phase of each frequency.
-%|H| (magnitude) represents the gain at each frequency.
-%angle(H) (phase) represents the phase shift at each frequency.
-%f: This is the frequency vector in Hz. It represents the frequencies corresponding to the points in the frequency response H. The length of f is the same as the length of H, and each element of f represents the frequency corresponding to that value in H.
-
 %% Step 3: Apply Convolution Reverb to an Audio File
 
-% Load the audio file (already provided)
-x = audioread('audio_file_to_apply_reverb.wav'); % Replace with the path to your audio file
+% Define the input and impulse response file paths
+audio_file = 'task1sig_to_apply_reverb.wav'; % Input audio file
+ir_file = 'impulse_response.wav'; % Impulse response file
 
-% Normalize the audio if necessary
-x = normalize(x);
+% Check if both files exist before proceeding
+if ~isfile(audio_file)
+    error('File %s not found.', audio_file);
+end
+if ~isfile(ir_file)
+    error('Impulse response file %s not found.', ir_file);
+end
 
-% Load the impulse response (IR) (already provided)
-ir = audioread('impulse_response.wav'); % Replace with the path to your IR file
+% Load the original audio file
+x = audioread(audio_file); % Read input audio file
+x = x / max(abs(x)); % Normalize signal to prevent clipping
 
+% Load the impulse response file
+ir = audioread(ir_file); % Read impulse response
 
-% Convolve the audio signal with the impulse response (apply reverb)
-y_reverb = conv(x, ir, 'same');  % 'same' ensures output size matches input size
+% Apply convolution reverb (simulate reverb effect)
+y_reverb = conv(x, ir, 'same'); % Convolution operation with 'same' output length
 
-% Normalize the output to prevent clipping
-y_reverb = normalize(y_reverb);
+% Normalize the output signal
+y_reverb = y_reverb / max(abs(y_reverb)); % Ensure the signal does not clip
 
-% Save the output with reverb applied
-audiowrite('audio_with_reverb.wav', y_reverb, fs);
+% Save the processed audio with reverb
+audiowrite('audio_with_reverb.wav', y_reverb, fs); % Write output file
 
-% Plot the original and reverb-processed signals for comparison
+% Plot the original and processed signals for comparison
 figure;
-subplot(2,1,1);
+subplot(2,1,1); % Create subplot for original signal
 plot(x);
 title('Original Audio Signal');
 xlabel('Sample');
 ylabel('Amplitude');
 
-subplot(2,1,2);
+subplot(2,1,2); % Create subplot for reverb-processed signal
 plot(y_reverb);
 title('Audio Signal with Convolution Reverb');
 xlabel('Sample');
 ylabel('Amplitude');
 
-% Listen to the processed audio (optional)
+% Play processed audio (optional)
 % sound(y_reverb, fs);
+
 
