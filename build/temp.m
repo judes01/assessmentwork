@@ -14,3 +14,4 @@ fc = 100;
 [b, a] = butter(2, fc/(fs2));
 
 %task
+https://www.dspguide.com/pdfbook.htm
