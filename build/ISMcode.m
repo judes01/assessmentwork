@@ -30,7 +30,7 @@ h = zeros(N, 1);                % Preallocate the impulse response vector
 %% 2. Image Source Method (ISM) and Impulse Response Construction
 % Call the function to generate the impulse response
 h = generate_IR(room_length, room_width, room_height, src_pos, rec_pos, fs, max_order, ...
-                absorption_wall, absorption_floor, absorption_ceiling, absorption_glass, N);
+                absorption_wall, absorption_floor, absorption_ceiling, absorption_glass, N, c);
 
 %% 3. Plot the Impulse Response
 time_axis = (0:N-1) / fs;  % Time vector in seconds
@@ -50,7 +50,7 @@ grid on;
 %   audio_reverberated = conv(audio, h);
 %   soundsc(audio_reverberated, fs);
 function h = generate_IR(room_length, room_width, room_height, src_pos, rec_pos, fs, max_order, ...
-                absorption_wall, absorption_floor, absorption_ceiling, absorption_glass, N)
+                absorption_wall, absorption_floor, absorption_ceiling, absorption_glass, N, c)
     % Function to generate the impulse response using the Image Source Method (ISM)
     % Arguments:
     % - room dimensions: room_length, room_width, room_height
@@ -59,6 +59,7 @@ function h = generate_IR(room_length, room_width, room_height, src_pos, rec_pos,
     % - maximum reflection order: max_order
     % - absorption coefficients for various surfaces
     % - impulse response length: N
+    % - speed of sound: c
     
     % Initialize impulse response vector
     h = zeros(N, 1);
