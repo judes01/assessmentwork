@@ -1,9 +1,12 @@
 %% 1. Parameter Definition
 % Room dimensions (meters)
-room_length = 7.6;    % Length in x-direction
-room_width  = 7.5;    % Width in y-direction
-room_height = 4;      % Height in z-direction
+% room_length = 7.6;    % Length in x-direction
+% room_width  = 7.5;    % Width in y-direction
+% room_height = 4;      % Height in z-direction
 
+room_length = 500;    % Length in x-direction
+room_width  = 800;    % Width in y-direction
+room_height = 300;      % Height in z-direction
 % Sound source and receiver (listener) positions [x, y, z] in meters
 src_pos = [3, 3, 1.5];   % Source position
 rec_pos = [5, 5, 1.5];   % Receiver position
@@ -17,16 +20,22 @@ max_order = 50;
 
 % Absorption coefficients for surfaces (values between 0 and 1)
 % These represent the fraction of energy absorbed at each surface.
-absorption_wall   = 0.1;   % Example for walls
-absorption_floor  = 0.2;   % Example for floor
-absorption_ceiling= 0.2;   % Example for ceiling
-absorption_glass  = 0.15;  % Example for glass windows
+absorption_wall = 0.4; 0.6; 0.7; 0.75; 0.8; 0.8;   % Example for walls
+absorption_floor  = 0.2; 0.3; 0.4; 0.5; 0.6; 0.7;   % Example for floor
+absorption_ceiling= 0.15; 0.25; 0.35; 0.45; 0.5; 0.55;   % Example for ceiling
+absorption_glass  = 0.05; 0.05; 0.05; 0.05; 0.05; 0.05;  % Example for glass windows
 
 % Impulse response duration (seconds)
 ir_duration = 3.0;  
 N = round(fs * ir_duration);    % Number of samples in the IR
 h = zeros(N, 1);                % Preallocate the impulse response vector
 
+    %% Defining Frequency Bands
+% Frequency Bands = 125Hz, 250Hz, 500Hz, 1000Hz, 2000Hz, 4000Hz
+frequency_bands = [125, 250, 500, 1000, 2000, 4000];  % Frequency bands in Hz
+lower_bound = frequency_bands / sqrt(2);   % Lower frequency bound for each band
+upper_bound = frequency_bands * sqrt(2);   % Upper frequency bound for each band
+nBands = length(frequency_bands);          % Number of frequency bands
 %% 2. Image Source Method (ISM) and Impulse Response Construction
 % Call the function to generate the impulse response
 h = generate_IR(room_length, room_width, room_height, src_pos, rec_pos, fs, max_order, ...
@@ -46,11 +55,15 @@ grid on;
 % reverb to an audio signal.
 % Example (uncomment and modify as needed):
 %
-%   [audio, fs_audio] = audioread('your_audio_file.wav');
-%   audio_reverberated = conv(audio, h);
-%   soundsc(audio_reverberated, fs);
+  [audio, fs_audio] = audioread('task2sig.wav');
+  audio_reverberated = conv(audio, h);
+  soundsc(audio_reverberated, fs);
+
+  audiowrite ('task2sig_with_reverb.wav', audio_reverberated, fs);
 function h = generate_IR(room_length, room_width, room_height, src_pos, rec_pos, fs, max_order, ...
                 absorption_wall, absorption_floor, absorption_ceiling, absorption_glass, N, c)
+
+
     % Function to generate the impulse response using the Image Source Method (ISM)
     % Arguments:
     % - room dimensions: room_length, room_width, room_height
@@ -128,3 +141,5 @@ function h = generate_IR(room_length, room_width, room_height, src_pos, rec_pos,
         end
     end
 end
+
+
