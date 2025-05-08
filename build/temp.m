@@ -11,7 +11,7 @@ normalize() % Adjusts the amplitude of an audio signal to ensure it stays within
 y = filter(b, a, x);
 fs = 44100;
 fc = 100;
-[b, a] = butter(2, fc/(fs2));
+[b, a] = cheby1(2, fc/(fs2));
 
 %task
 https://www.dspguide.com/pdfbook.htm
