@@ -15,74 +15,111 @@ fc = 100;
 
 %task
 https://www.dspguide.com/pdfbook.htm
-% simple_filter_cheby.m
+%% simple_filter_cheby.m
 % This script applies a Chebyshev Type I filter (low-pass or high-pass) to an audio file.
 % It reads the file, filters the signal, normalizes the output, and saves the result.
 
-% Prompt the user to select an audio file from their computer
-[filename, pathname] = uigetfile('*.wav', 'Select an audio file to filter');
 
-% Check if the user canceled the file selection
-if isequal(filename,0)
-    disp('User canceled the file selection.');
-    return;  % Stop the script
+%%1. Select Two Audio Files for Comparison
+[filename1, pathname1] = uigetfile('*.wav', 'Select the FIRST audio file');  % Opens a dialog to select the first audio file
+if isequal(filename1, 0)  % Checks if the user canceled the file selection
+    disp('User canceled first file selection.');  % Displays a message if the user canceled
+    return;  % Exits the script
 end
 
-% Read the selected audio file. 'x' is the audio data, 'fs' is the sample rate
-[x, fs] = audioread(fullfile(pathname, filename)); % audioread reads the audio data
-
-% If the audio is stereo (2 channels), separate it into left and right channels
-if size(x,2) == 2
-    left = x(:,1);   % Left channel
-    right = x(:,2);  % Right channel
-else
-    left = x;        % If it's mono, use it as the left channel
-    right = [];      % No right channel
+[filename2, pathname2] = uigetfile('*.wav', 'Select the SECOND audio file');  
+if isequal(filename2, 0)  
+    disp('User canceled second file selection.');  
+    return;  
 end
 
-% Ask the user to enter the type of filter they want to apply
-filterType = input('Enter filter type (low or high): ', 's');
+% Read the audio files
+[x1, fs1] = audioread(fullfile(pathname1, filename1));  % Reads the first audio file and its sample rate
+[x2, fs2] = audioread(fullfile(pathname2, filename2)); 
 
-% Check that the user entered either "low" or "high"
-if ismember(filterType, {'low', 'high'})
-    % If the input is valid, continue
-else
-    % If the input is invalid, stop the script and show an error
-    error('Invalid filter type. Choose "low" or "high".');
+% Ensure both files have the same sample rate
+if fs1 ~= fs2  % Checks if the sample rates of the two files are different
+    error('Sample rates of the two audio files do not match.');  % Throws an error if the sample rates don't match
+end
+fs = fs1;  % Uses the common sample rate for further processing
+
+% Convert stereo to mono if necessary
+if size(x1, 2) == 2  % Checks if the first audio file is stereo
+    x1 = mean(x1, 2);  % Converts stereo to mono by averaging the channels
+end
+if size(x2, 2) == 2  
+    x2 = mean(x2, 2); 
 end
 
-% Ask the user for the cutoff frequency of the filter (in Hz)
-fc = input('Enter cutoff frequency in Hz (e.g. 1000): ');
+%%2. Ask user for filter settings
+filterType = input('Enter filter type (low or high): ', 's');  % Prompts user for filter type (low or high)
+if ~ismember(filterType, {'low', 'high'})  % Checks if the entered filter type is valid
+    error('Invalid filter type. Choose "low" or "high".');  % Throws an error if the filter type is invalid
+end
 
-% Ask the user for the filter order (higher means steeper but more complex)
-order = input('Enter filter order (e.g. 4): ');
+fc = input('Enter cutoff frequency in Hz (e.g. 1000): ');  % Prompts user for cutoff frequency
+order = input('Enter filter order (e.g. 4): ');  % Prompts user for filter order
+ripple = input('Enter ripple in dB for Chebyshev filter (e.g. 1): ');  % Prompts user for ripple value
+Wn = fc / (fs / 2);  % Normalizes the cutoff frequency
 
-% Ask the user how much ripple is allowed in the passband (in dB)
-% This is a unique feature of Chebyshev Type I filters
-ripple = input('Enter ripple in dB for Chebyshev filter (e.g. 1): ');
+% Design the filter
+[b, a] = cheby1(order, ripple, Wn, filterType);  % Designs a Chebyshev filter based on user input
 
-% Convert the cutoff frequency to a value between 0 and 1 (required by MATLAB)
-% This is done by dividing by half the sampling rate (Nyquist frequency)
-Wn = fc / (fs / 2);
+% Filter and normalize
+y1 = filter(b, a, x1);  % Filters the first audio signal
+y2 = filter(b, a, x2);  % Filters the second audio signal
+y1 = y1 / max(abs(y1));  % Normalizes the first filtered signal
+y2 = y2 / max(abs(y2));  % Normalizes the second filtered signal
 
-% Design the Chebyshev Type I filter using the user inputs
-% 'b' and 'a' are the filter coefficients used to apply the filter
-[b, a] = cheby1(order, ripple, Wn, filterType);
+% Save filtered files (optional, but useful for validation)
+audiowrite('filtered_file1.wav', y1, fs);  % Saves the first filtered file to disk
+audiowrite('filtered_file2.wav', y2, fs);  % Saves the second filtered file to disk
+disp('Both files filtered and saved.');  % Displays a confirmation message
 
-% Apply the filter to the audio signal using the filter coefficients
-% This reduces or removes unwanted frequencies from the audio
-y = filter(b, a, x);  % 'filter' applies the designed filter to the signal
+%%3. FFT and Magnitude Spectrum
 
-% Normalize the filtered signal so that its values stay within the range [-1, 1]
-% This prevents distortion and ensures proper playback volume
-y = y / max(abs(y));  % Scale signal to maximum amplitude of 1
+% Get the length of each audio signal (y1 and y2)
+N1 = length(y1);  % Gets the length of the first filtered signal
+N2 = length(y2);  % Gets the length of the second filtered signal
 
-% Save the filtered audio signal to a new file called "filteredsig.wav"
-% The file will be saved in the current MATLAB working directory
-audiowrite('filteredsig.wav', y, fs);  % Write the output using the same sample rate
+% Perform the Fast Fourier Transform (FFT) on both audio signals
+Y1 = fft(y1);  % Computes the dft of the first filtered signal
+Y2 = fft(y2);  % Computes the dft of the second filtered signal
 
-% Tell the user the process is finished and the file was saved
-disp('Filtered audio saved as "filteredsig.wav".');
+% Compute the magnitude of the FFT for both signals (get rid of negative frequencies)
+Y1_mag = abs(Y1(1:N1/2+1));  % Get the magnitude of the positive frequencies of the first signal
+Y2_mag = abs(Y2(1:N2/2+1));  % Get the magnitude of the positive frequencies of the second signal
+
+% Generate the frequency axis (the range of frequencies we're interested in)
+f1 = (0:N1/2) * fs / N1;  % Create the frequency axis for the first signal
+f2 = (0:N2/2) * fs / N2;  % Create the frequency axis for the second signal
+
+% Normalize the magnitude spectra (so the values are between 0 and 1)
+Y1_mag = Y1_mag / N1;  % Normalize the magnitude of the first signal
+Y2_mag = Y2_mag / N2;  % Normalize the magnitude of the second signal
+
+% Scale the middle part of the FFT to account for the energy in the negative frequencies
+Y1_mag(2:end-1) = 2 * Y1_mag(2:end-1);  % Double the middle part of the magnitude of the first signal (exclude the first and last values)
+Y2_mag(2:end-1) = 2 * Y2_mag(2:end-1);  % Double the middle part of the magnitude of the second signal (exclude the first and last values)
+
+% Create the figure to plot the graphs
+figure;  % Start a new figure window for the plots
+
+% Plot the magnitude spectrum of the first signal (filtered)
+subplot(2,1,1);  % Create the first subplot (top plot in a 2-row layout)
+plot(f1, Y1_mag, 'b');  % Plot the frequency vs magnitude of the first signal in blue
+title(['Magnitude Spectrum (Filtered): ', filename1]);  % Set the title with the filename of the first signal
+xlabel('Frequency (Hz)');  % Label the x-axis as frequency (in Hz)
+ylabel('Magnitude');  % Label the y-axis as magnitude
+xlim([0 fs/2]);  % Limit the x-axis to the range from 0 to half the sample rate (Nyquist frequency)
+
+% Plot the magnitude spectrum of the second signal (filtered)
+subplot(2,1,2);  % Create the second subplot (bottom plot in a 2-row layout)
+plot(f2, Y2_mag, 'r');  % Plot the frequency vs magnitude of the second signal in red
+title(['Magnitude Spectrum (Filtered): ', filename2]);  % Set the title with the filename of the second signal
+xlabel('Frequency (Hz)');  % Label the x-axis as frequency (in Hz)
+ylabel('Magnitude');  % Label the y-axis as magnitude
+xlim([0 fs/2]);  % Limit the x-axis to the range from 0 to half the sample rate (Nyquist frequency)
 
 %% explainations 
 %Chebyshev Type I filters are useful when you want a sharper cutoff than Butterworth filters, but can tolerate small ripples in the passband.
