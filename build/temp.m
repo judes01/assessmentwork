@@ -20,125 +20,181 @@ fc = 100;
 % 2. Applies a Chebyshev Type I filter (low-pass or high-pass)
 % 3. Normalizes the filtered audio
 % 4. Saves the filtered versions
-% 5. Plots their frequency content using FFT
+% 5. Plots both the magnitude and phase spectra
+
+
+% Base functions used:
+% audioread()   - Reads audio files
+% audiowrite()  - Saves audio files
+% filter()      - Applies a digital filter to audio
+% normalize()   - Scales audio to fit within [-1, 1]
+% fft()         - Converts audio from time domain to frequency domain
 
 %% 1. SELECT AUDIO FILES
 
-%clear; clc; close all% 
+clear;    % Clear all variables from workspace
+clc;      % Clear the command window
 
+% Ask the user to choose the first audio file (.wav)
+[filename1, pathname1] = uigetfile('*.wav', 'Select the FIRST audio file'); 
 
-[filename1, pathname1] = uigetfile('*.wav', 'Select the FIRST audio file'); % 
+% If the user presses cancel, stop the script
 if isequal(filename1, 0)
-disp('User canceled first file selection.');
-return;
+    disp('User canceled first file selection.');
+    return;  % Exit the script
 end
 
+% Ask the user to choose the second audio file (.wav)
 [filename2, pathname2] = uigetfile('*.wav', 'Select the SECOND audio file');
+
+% If the user presses cancel, stop the script
 if isequal(filename2, 0)
-disp('User canceled second file selection.');
-return;
+    disp('User canceled second file selection.');
+    return;  % Exit the script
 end
 
-% Read the audio files
-[x1, fs1] = audioread(fullfile(pathname1, filename1));
-[x2, fs2] = audioread(fullfile(pathname2, filename2));
+% Read the first audio file
+[x1, fs1] = audioread(fullfile(pathname1, filename1));  % x1 is the audio data, fs1 is the sample rate
 
-% Check sample rate match
+% Read the second audio file
+[x2, fs2] = audioread(fullfile(pathname2, filename2));  % x2 is the audio data, fs2 is the sample rate
+
+% Check if sample rates match, if not, resample x2 to match fs1
 if fs1 ~= fs2
-%error('Sample rates of the two audio files do not match.');
-x2 = resample(x2, fs2, fs1);
+    x2 = resample(x2, fs2, fs1);  % Adjusts x2 so both files have same sample rate
 end
 
-
-%fs2 = fs1; % Use common sample rate
-
-% Convert stereo to mono (if needed)
-if size(x1, 2) == 2
-x1 = mean(x1, 2);
+% Convert stereo to mono by averaging left and right channels (if needed)
+if size(x1, 2) == 2  % Check if x1 has 2 channels (stereo)
+    x1 = mean(x1, 2);  % Convert to mono by averaging
 end
-if size(x2, 2) == 2
-x2 = mean(x2, 2);
+if size(x2, 2) == 2  % Check if x2 has 2 channels (stereo)
+    x2 = mean(x2, 2);  % Convert to mono by averaging
 end
 
 %% 2. GET FILTER SETTINGS FROM USER
 
+% Ask the user whether they want a low-pass or high-pass filter
 filterType = input('Enter filter type (low or high): ', 's');
+
+% Validate input; if it's not "low" or "high", stop the script
 if ~ismember(filterType, {'low', 'high'})
-error('Invalid filter type. Choose "low" or "high".');
+    error('Invalid filter type. Choose "low" or "high".');  % Show error and exit
 end
 
+% Ask the user for the cutoff frequency in Hz
 fc = input('Enter cutoff frequency in Hz (e.g. 1000): ');
-%fc = str2double(fc);
+
+% Ask for filter order (higher = sharper filter)
 order = input('Enter filter order (e.g. 4): ');
+
+% Ask how much ripple (variation) is allowed in the passband, in dB
 ripple = input('Enter ripple in dB for Chebyshev filter (e.g. 1): ');
+
+% Calculate Nyquist frequency (half of sampling rate)
 nyq = fs1 / 2;
 
-Wn = fc / nyq; % Normalize cutoff frequency (0–1)
+% Convert cutoff frequency into a value between 0 and 1 (normalized)
+Wn = fc / nyq;
 
-% Design Chebyshev Type I filter
-[b, a] = cheby1(order, ripple, Wn, filterType);
+% Design the Chebyshev Type I filter using user settings
+[b, a] = cheby1(order, ripple, Wn, filterType);  % b = numerator, a = denominator coefficients
 
 %% 3. APPLY FILTER AND NORMALIZE
 
-% Filter each signal
-y1 = filter(b, a, x1);
-y2 = filter(b, a, x2);
+% Apply the filter to the first audio signal
+y1 = filter(b, a, x1);  % Filtered signal y1
 
-% Normalize (scale between -1 and 1)
-y1 = y1 / max(abs(y1));
-y2 = y2 / max(abs(y2));
+% Apply the filter to the second audio signal
+y2 = filter(b, a, x2);  % Filtered signal y2
 
-% Save filtered files
-audiowrite('filtered_file1.wav', y1, fs1);
-audiowrite('filtered_file2.wav', y2, fs1);
-disp('Both files filtered and saved.');
+% Normalize y1 so its loudest point is 1 or -1
+y1 = y1 / max(abs(y1));  % Prevents clipping
 
-%% 4. PLOT MAGNITUDE SPECTRUM USING FFT
+% Normalize y2 so its loudest point is 1 or -1
+y2 = y2 / max(abs(y2));  % Prevents clipping
 
-% Get signal lengths
+% Save the filtered signals as new audio files
+audiowrite('filtered_file1.wav', y1, fs1);  % Save y1
+
+audiowrite('filtered_file2.wav', y2, fs1);  % Save y2
+
+disp('Both files filtered and saved.');  % Let the user know it's done
+
+%% 4. PLOT MAGNITUDE & PHASE SPECTRUM USING FFT
+
+% Get the length of the first filtered signal
 N1 = length(y1);
+
+% Get the length of the second filtered signal
 N2 = length(y2);
 
-% Apply FFT
-Y1 = fft(y1);
-Y2 = fft(y2);
+% Perform Fast Fourier Transform to move to frequency domain
+Y1 = fft(y1);  % FFT of first signal
+Y2 = fft(y2);  % FFT of second signal
 
-% Get magnitude of positive frequencies only
+% Get magnitude for only the positive frequencies
 Y1_mag = abs(Y1(1:N1/2+1));
 Y2_mag = abs(Y2(1:N2/2+1));
 
-% Frequency axis
+% Get phase angles for positive frequencies
+Y1_phase = angle(Y1(1:N1/2+1));  % Phase of Y1
+Y2_phase = angle(Y2(1:N2/2+1));  % Phase of Y2
+
+% Create frequency axis for first signal
 f1 = (0:N1/2) * fs1 / N1;
+
+% Create frequency axis for second signal
 f2 = (0:N2/2) * fs1 / N2;
 
-% Normalize FFT magnitude
+% Normalize magnitude (to make comparison fair)
 Y1_mag = Y1_mag / N1;
 Y2_mag = Y2_mag / N2;
 
-% Double middle bins to keep energy (except DC and Nyquist)
+% Double all bins except the first and last to conserve signal energy
 Y1_mag(2:end-1) = 2 * Y1_mag(2:end-1);
 Y2_mag(2:end-1) = 2 * Y2_mag(2:end-1);
 
-% Plot
+% Start a new figure window for plotting
 figure;
 
-subplot(2,1,1);
+% Plot magnitude spectrum for first file
+subplot(2,2,1);
 plot(f1, Y1_mag, 'b');
 title(['Magnitude Spectrum: ', filename1]);
 xlabel('Frequency (Hz)');
 ylabel('Magnitude');
-xlim([0 nyq]);
+xlim([0 nyq]);  % Limit x-axis to Nyquist frequency
 grid on;
 
-subplot(2,1,2);
-plot(f2, Y2_mag, 'r');
+% Plot magnitude spectrum for second file
+subplot(2,2,2);
+plot(f2, Y2_mag, 'r');  
 title(['Magnitude Spectrum: ', filename2]);
 xlabel('Frequency (Hz)');
 ylabel('Magnitude');
 xlim([0 nyq]);
 grid on;
 
-drawnow; % Forces figure to render now
+% Plot phase spectrum for first file
+subplot(2,2,3);
+plot(f1, unwrap(Y1_phase), 'b');  % Unwrap to avoid phase jumps
+title(['Phase Spectrum: ', filename1]);
+xlabel('Frequency (Hz)');
+ylabel('Phase (radians)');
+xlim([0 nyq]);
+grid on;
+
+% Plot phase spectrum for second file
+subplot(2,2,4);
+plot(f2, unwrap(Y2_phase), 'r');  % Unwrap phase
+title(['Phase Spectrum: ', filename2]);
+xlabel('Frequency (Hz)');
+ylabel('Phase (radians)');
+xlim([0 nyq]);
+grid on;
+
+drawnow;  % Render all plots immediately
 
 %% EXPLANATION SECTION 
 
